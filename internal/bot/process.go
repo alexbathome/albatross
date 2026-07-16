@@ -2,6 +2,7 @@ package bot
 
 import (
 	"context"
+	"errors"
 	"log"
 	"time"
 
@@ -33,7 +34,8 @@ const (
 
 // ProcessMessage inspects msg for a putt.day share link and, if found, scrapes
 // and persists it. Returns the reaction emoji to apply, or "" if msg had no
-// share link at all (no reaction in that case).
+// share link at all, or the link was for a custom map (no reaction in either
+// case).
 //
 // If allowedGuildID is non-empty, messages from any other guild (or from DMs)
 // are dropped without reaction: the bot only ever collects scores for the one
@@ -51,6 +53,9 @@ func ProcessMessage(ctx context.Context, collector Collector, st store.Store, ms
 	}
 
 	score, err := collector.Collect(ctx, link)
+	if errors.Is(err, puttday.ErrCustomMap) {
+		return ""
+	}
 	if err != nil {
 		log.Printf("puttday collect failed for %s: %v", link, err)
 		return reactionFailure
