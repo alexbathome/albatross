@@ -121,6 +121,26 @@ func TestProcessMessage_CollectError(t *testing.T) {
 	}
 }
 
+func TestProcessMessage_CustomMapDropped(t *testing.T) {
+	ctx := context.Background()
+	st := openTestStore(t)
+	collector := &fakeCollector{err: puttday.ErrCustomMap}
+
+	msg := IncomingMessage{Content: "https://putt.day/s/qSSLaHbOxWnI", AuthorID: "u1"}
+	got := ProcessMessage(ctx, collector, st, msg, "")
+	if got != "" {
+		t.Errorf("ProcessMessage() = %q, want empty (no reaction) for a custom map", got)
+	}
+
+	exists, err := st.Exists(ctx, "https://putt.day/s/qSSLaHbOxWnI")
+	if err != nil {
+		t.Fatalf("Exists() error = %v", err)
+	}
+	if exists {
+		t.Errorf("Exists() = true, want false: a custom-map share should not be recorded")
+	}
+}
+
 func TestProcessMessage_DuplicateStillReactsSuccess(t *testing.T) {
 	ctx := context.Background()
 	st := openTestStore(t)

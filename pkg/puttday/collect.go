@@ -21,9 +21,23 @@ var (
 	// ErrResultNotFound is returned when a share page doesn't contain a
 	// recognizable hole/stroke result.
 	ErrResultNotFound = errors.New("result not found in page")
+	// ErrCustomMap is returned when a share link is for a custom
+	// (player-made) map rather than a numbered daily hole. Custom maps have
+	// no hole number, so there's nothing to record; callers should treat
+	// this as "nothing to do" rather than a failure.
+	ErrCustomMap = errors.New("share link is for a custom map, not a numbered hole")
 )
 
-var resultPattern = regexp.MustCompile(`Hole #(\d+)</b> in <b>(\d+)</b>`)
+var (
+	// numberedResultPattern matches a share page for a numbered daily hole,
+	// e.g. `Hole #65</b> in <b>6</b>`.
+	numberedResultPattern = regexp.MustCompile(`Hole #(\d+)</b> in <b>(\d+)</b>`)
+	// customMapPattern matches a share page for a custom (player-made) map,
+	// which names the map in quotes instead of a hole number, e.g.
+	// `“In the Clouds”</b> in <b>2</b>`. putt.day uses curly quotes, but
+	// straight quotes are accepted too in case that ever changes.
+	customMapPattern = regexp.MustCompile(`<b>[“"][^”"<]+[”"]</b> in <b>\d+</b>`)
+)
 
 type collector struct {
 	client *http.Client
@@ -84,8 +98,11 @@ func (c *collector) Collect(ctx context.Context, shareLink string) (*SharedScore
 	if err != nil {
 		return nil, fmt.Errorf("reading response body: %w", err)
 	}
-	match := resultPattern.FindSubmatch(body)
+	match := numberedResultPattern.FindSubmatch(body)
 	if match == nil {
+		if customMapPattern.Match(body) {
+			return nil, fmt.Errorf("%w: %s", ErrCustomMap, shareLink)
+		}
 		return nil, fmt.Errorf("%w: %s", ErrResultNotFound, shareLink)
 	}
 

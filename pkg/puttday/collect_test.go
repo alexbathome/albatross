@@ -168,6 +168,18 @@ func TestCollect(t *testing.T) {
 			wantHole:    7,
 			wantStrokes: 3,
 		},
+		{
+			name:       "custom map with curly quotes is dropped, not treated as not-found",
+			body:       `Someone finished <b>“In the Clouds”</b> in <b>2</b> strokes. Can you beat it?`,
+			statusCode: http.StatusOK,
+			wantErr:    ErrCustomMap,
+		},
+		{
+			name:       "custom map with straight quotes is dropped, not treated as not-found",
+			body:       `finished <b>"Windy Ridge"</b> in <b>9</b> strokes.`,
+			statusCode: http.StatusOK,
+			wantErr:    ErrCustomMap,
+		},
 	}
 
 	const shareLink = "https://putt.day/s/HRTRtJo8DO53"
