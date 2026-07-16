@@ -1,0 +1,60 @@
+// Package store persists and queries recorded putt.day scores.
+package store
+
+import (
+	"context"
+	"errors"
+	"time"
+)
+
+var (
+	// ErrNotFound is returned when a share link has no recorded score.
+	ErrNotFound = errors.New("store: record not found")
+	// ErrForbidden is returned when a share link's score is not owned by
+	// the requesting user.
+	ErrForbidden = errors.New("store: user does not own this record")
+)
+
+// ScoreRecord is a single recorded putt.day play.
+type ScoreRecord struct {
+	ShareLink  string
+	Hole       int
+	Strokes    int
+	UserID     string
+	GuildID    string
+	ChannelID  string
+	MessageID  string
+	RecordedAt time.Time
+}
+
+// Store persists and queries ScoreRecords.
+type Store interface {
+	// SaveScore persists rec. If rec.ShareLink has already been recorded,
+	// it is a no-op: inserted is false and err is nil.
+	SaveScore(ctx context.Context, rec ScoreRecord) (inserted bool, err error)
+
+	// Exists reports whether shareLink has already been recorded.
+	Exists(ctx context.Context, shareLink string) (bool, error)
+
+	// DeleteByShareLink removes the record for shareLink. Returns ErrNotFound
+	// if no record exists for shareLink. Unless bypassOwnership is true, it
+	// also returns ErrForbidden if requestingUserID does not match the
+	// record's owner — bypassOwnership lets a server admin remove a record
+	// they don't own.
+	//
+	// removedFromLeaderboard reports whether the deletion actually changed
+	// TopScores/UserScores output: if shareLink had already been superseded
+	// by a more recent play with the same (hole, user, strokes) — see
+	// SaveScore — the leaderboard entry belongs to that newer link and is
+	// left untouched, even though shareLink's own record is still removed.
+	DeleteByShareLink(ctx context.Context, shareLink string, requestingUserID string, bypassOwnership bool) (removedFromLeaderboard bool, err error)
+
+	// TopScores returns up to limit records for hole, ascending by strokes.
+	TopScores(ctx context.Context, hole int, limit int) ([]ScoreRecord, error)
+
+	// UserScores returns userID's records for hole, ascending by strokes.
+	UserScores(ctx context.Context, hole int, userID string) ([]ScoreRecord, error)
+
+	// Close releases any resources held by the store.
+	Close() error
+}

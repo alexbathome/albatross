@@ -1,0 +1,24 @@
+# Before the first deploy:
+#   1. fly apps create albatross                              (or let `fly launch` do this)
+#   2. fly volumes create albatross_data --region iad --size 1  (must match primary_region below)
+#   3. fly secrets set ALBATROSS_DISCORD_TOKEN=<your bot token> (never put the token in this file)
+#
+# Deploy with: fly deploy
+
+app = "albatross-discord-bot"
+primary_region = "iad"
+
+[build]
+dockerfile = "Dockerfile"
+
+[env]
+ALBATROSS_DB_PATH = "/data/albatross.db"
+ALBATROSS_COMMAND_GUILD_ID = "1527339615218958336" # ell.dev discord server
+
+[mounts]
+source = "albatross_data"
+destination = "/data"
+
+[[vm]]
+size = "shared-cpu-1x"
+memory = "256mb"

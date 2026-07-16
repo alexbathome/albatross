@@ -1,0 +1,30 @@
+version: "2"
+
+linters:
+  default: none
+  enable:
+    # Default-on linters in golangci-lint v2 (kept explicit here for
+    # clarity). staticcheck in v2 subsumes what used to be the separate
+    # gosimple/stylecheck linters in v1.
+    - govet        # suspicious constructs (the "go vet" passes)
+    - errcheck     # unchecked error return values
+    - staticcheck  # SA/S/ST-series static analysis and simplification checks
+    - unused       # unused constants, variables, functions, types
+    - ineffassign  # assignments whose value is never used
+    # Extra, still-cheap linters worth their keep on a small project:
+    - unconvert    # unnecessary type conversions
+    - unparam      # unused function parameters / always-same return values
+    - misspell     # common English misspellings in comments/strings
+    - revive       # extensible style linter; used here mainly for its
+                   # `exported` rule (missing doc comments on exported API)
+  settings:
+    revive:
+      rules:
+        - name: exported
+          arguments:
+            - disableStutteringCheck
+
+issues:
+  # Show every issue; don't hide behind golangci-lint's default result caps.
+  max-issues-per-linter: 0
+  max-same-issues: 0

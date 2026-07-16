@@ -1,0 +1,8 @@
+# development scripts
+/dev.sh
+
+# local bbolt databases (contain real Discord user/guild IDs)
+*.db
+
+# superseded config backups
+/.golangci.bck.yml
