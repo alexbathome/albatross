@@ -8,12 +8,12 @@ import (
 	"time"
 )
 
-func openTestStore(t *testing.T) *BoltStore {
+func openTestStore(t *testing.T) *DuckDbStore {
 	t.Helper()
 	path := filepath.Join(t.TempDir(), "test.db")
-	s, err := Open(path)
+	s, err := OpenDuckDb(path)
 	if err != nil {
-		t.Fatalf("Open() error = %v", err)
+		t.Fatalf("OpenDuckDb() error = %v", err)
 	}
 	t.Cleanup(func() { _ = s.Close() })
 	return s
@@ -132,7 +132,7 @@ func TestUserScores(t *testing.T) {
 		}
 	}
 
-	scores, err := s.UserScores(ctx, 42, "u1")
+	scores, err := s.UserScores(ctx, 42, "u1", 10)
 	if err != nil {
 		t.Fatalf("UserScores() error = %v", err)
 	}
@@ -174,15 +174,18 @@ func TestSaveScore_RepeatScoreCollapsesToMostRecent(t *testing.T) {
 		t.Errorf("TopScores()[0].ShareLink = %q, want %q (most recent play)", top[0].ShareLink, second.ShareLink)
 	}
 
-	userScores, err := s.UserScores(ctx, 65, "u1")
+	// Unlike TopScores, UserScores is personal history: it does not collapse
+	// repeat plays at the same score, so both links remain visible.
+	userScores, err := s.UserScores(ctx, 65, "u1", 10)
 	if err != nil {
 		t.Fatalf("UserScores() error = %v", err)
 	}
-	if len(userScores) != 1 {
-		t.Fatalf("UserScores() len = %d, want 1", len(userScores))
+	if len(userScores) != 2 {
+		t.Fatalf("UserScores() len = %d, want 2 (personal history keeps every play)", len(userScores))
 	}
-	if userScores[0].ShareLink != second.ShareLink {
-		t.Errorf("UserScores()[0].ShareLink = %q, want %q (most recent play)", userScores[0].ShareLink, second.ShareLink)
+	gotLinks := map[string]bool{userScores[0].ShareLink: true, userScores[1].ShareLink: true}
+	if !gotLinks[first.ShareLink] || !gotLinks[second.ShareLink] {
+		t.Errorf("UserScores() = %+v, want both %q and %q", userScores, first.ShareLink, second.ShareLink)
 	}
 
 	// The superseded share link is still known to Exists (it really was
@@ -211,7 +214,7 @@ func TestSaveScore_DifferentScoresForSameUserBothAppear(t *testing.T) {
 		}
 	}
 
-	scores, err := s.UserScores(ctx, 65, "u1")
+	scores, err := s.UserScores(ctx, 65, "u1", 10)
 	if err != nil {
 		t.Fatalf("UserScores() error = %v", err)
 	}
@@ -244,7 +247,7 @@ func TestDeleteByShareLink(t *testing.T) {
 	if len(top) != 0 {
 		t.Fatalf("TopScores() len = %d, want 0 after delete", len(top))
 	}
-	userScores, err := s.UserScores(ctx, 65, "u1")
+	userScores, err := s.UserScores(ctx, 65, "u1", 10)
 	if err != nil {
 		t.Fatalf("UserScores() error = %v", err)
 	}

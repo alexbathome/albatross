@@ -4,6 +4,7 @@ package albatross
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -11,7 +12,6 @@ import (
 	"syscall"
 
 	"github.com/alexbathome/albatross/internal/bot"
-	"github.com/alexbathome/albatross/internal/config"
 	"github.com/alexbathome/albatross/pkg/puttday"
 	"github.com/alexbathome/albatross/pkg/store"
 )
@@ -22,24 +22,41 @@ func Main(ctx context.Context, args []string) error {
 	ctx, stop := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	cfg, err := config.Load()
-	if err != nil {
-		return fmt.Errorf("loading config: %w", err)
+	var (
+		fs = flag.NewFlagSet("albatross", flag.ExitOnError)
+		discordToken   string
+		dbPath         string
+		commandGuildId string
+	)
+	fs.StringVar(&discordToken, "discord-token", "", "the discord bot token (or set ALBATROSS_DISCORD_TOKEN)")
+	fs.StringVar(&dbPath, "db-path", os.Getenv("ALBATROSS_DB_PATH"), "the path to the duckdb file")
+	fs.StringVar(&commandGuildId, "guild-id", os.Getenv("ALBATROSS_COMMAND_GUILD_ID"), "the discord server/guild id")
+	if err := fs.Parse(args[1:]); err != nil {
+		return err
+	}
+	if discordToken == "" {
+		// don't put sensitive tokens in the fs.StringVar default as it can 
+		// leak to stdout when the user runs `-h` or `--help`
+		discordToken = os.Getenv("ALBATROSS_DISCORD_TOKEN")
 	}
 
-	st, err := store.Open(cfg.DBPath)
+	if discordToken == "" || dbPath == "" {
+		return fmt.Errorf("discord-token and db-path are required (as a flag or ALBATROSS_* env var)")
+	}
+
+	db, err := store.OpenDuckDb(dbPath)
 	if err != nil {
 		return fmt.Errorf("opening store: %w", err)
 	}
 	defer func() {
-		if err := st.Close(); err != nil {
+		if err := db.Close(); err != nil {
 			log.Printf("closing store: %v", err)
 		}
 	}()
 
 	collector := puttday.NewCollector()
 
-	b, err := bot.New(cfg.DiscordToken, st, collector, cfg.CommandGuildID)
+	b, err := bot.New(discordToken, db, collector, commandGuildId)
 	if err != nil {
 		return fmt.Errorf("creating bot: %w", err)
 	}

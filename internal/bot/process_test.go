@@ -19,11 +19,11 @@ func (f *fakeCollector) Collect(ctx context.Context, shareLink string) (*puttday
 	return f.score, f.err
 }
 
-func openTestStore(t *testing.T) *store.BoltStore {
+func openTestStore(t *testing.T) *store.DuckDbStore {
 	t.Helper()
-	s, err := store.Open(filepath.Join(t.TempDir(), "test.db"))
+	s, err := store.OpenDuckDb(filepath.Join(t.TempDir(), "test.db"))
 	if err != nil {
-		t.Fatalf("store.Open() error = %v", err)
+		t.Fatalf("store.OpenDuckDb() error = %v", err)
 	}
 	t.Cleanup(func() { _ = s.Close() })
 	return s

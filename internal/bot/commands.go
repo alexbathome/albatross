@@ -92,7 +92,7 @@ func (b *Bot) handleScoreCommand(ctx context.Context, s *discordgo.Session, i *d
 	hole := int(data.GetOption("hole").IntValue())
 	target := data.GetOption("user").UserValue(s)
 
-	scores, err := b.store.UserScores(ctx, hole, target.ID)
+	scores, err := b.store.UserScores(ctx, hole, target.ID, 25)
 	if err != nil {
 		respond(s, i, "Something went wrong looking up that score.")
 		return

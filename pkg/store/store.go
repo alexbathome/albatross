@@ -52,8 +52,12 @@ type Store interface {
 	// TopScores returns up to limit records for hole, ascending by strokes.
 	TopScores(ctx context.Context, hole int, limit int) ([]ScoreRecord, error)
 
-	// UserScores returns userID's records for hole, ascending by strokes.
-	UserScores(ctx context.Context, hole int, userID string) ([]ScoreRecord, error)
+	// UserScores returns up to limit of userID's records for hole, ascending
+	// by strokes. Unlike TopScores, results are not deduplicated by
+	// (hole, user, strokes): repeat plays at the same score are all
+	// returned, so a user can browse back through every run on a hole —
+	// including a fun one worth keeping — not just their best per score.
+	UserScores(ctx context.Context, hole int, userID string, limit int) ([]ScoreRecord, error)
 
 	// Close releases any resources held by the store.
 	Close() error
