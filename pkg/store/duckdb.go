@@ -10,6 +10,7 @@ import (
 	"github.com/duckdb/duckdb-go/v2"
 )
 
+// DuckDbStore is a [Store] backed by DuckDB.
 type DuckDbStore struct {
 	db *sql.DB
 }
@@ -17,6 +18,8 @@ type DuckDbStore struct {
 // compile time interface implementation check
 var _ Store = (*DuckDbStore)(nil)
 
+// OpenDuckDb opens (creating if necessary) a DuckDB database at path and
+// initializes its schema.
 func OpenDuckDb(path string) (*DuckDbStore, error) {
 	connector, err := duckdb.NewConnector(path, nil)
 	if err != nil {
@@ -75,7 +78,7 @@ func (d *DuckDbStore) DeleteByShareLink(ctx context.Context, shareLink string, r
 	if err != nil {
 		return false, fmt.Errorf("beginning transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	var hole, strokes int
 	var userID string
@@ -140,7 +143,7 @@ func (d *DuckDbStore) SaveScore(ctx context.Context, rec ScoreRecord) (inserted 
 	if err != nil {
 		return false, fmt.Errorf("beginning transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	if _, err := tx.ExecContext(ctx,
 		`INSERT INTO holes (hole) VALUES (?) ON CONFLICT DO NOTHING`,
@@ -187,7 +190,7 @@ func (d *DuckDbStore) TopScores(ctx context.Context, hole int, limit int) ([]Sco
 	if err != nil {
 		return nil, fmt.Errorf("querying top scores: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var out []ScoreRecord
 	for rows.Next() {
@@ -215,7 +218,7 @@ func (d *DuckDbStore) UserScores(ctx context.Context, hole int, userID string, l
 	if err != nil {
 		return nil, fmt.Errorf("querying user scores: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var out []ScoreRecord
 	for rows.Next() {
