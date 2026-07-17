@@ -4,6 +4,12 @@
 #   3. fly secrets set ALBATROSS_DISCORD_TOKEN=<your bot token> (never put the token in this file)
 #
 # Deploy with: fly deploy
+#
+# Note: ALBATROSS_DB_PATH was renamed from albatross.db to albatross.duckdb
+# when storage moved from bbolt to DuckDB, since the existing volume still
+# has the old bbolt file at the old path and DuckDB can't open a bbolt file.
+# The old file is now orphaned on the volume; `fly ssh console` in and `rm`
+# it if you want to reclaim the space, but it's otherwise harmless.
 
 app = "albatross-discord-bot"
 primary_region = "iad"
@@ -12,12 +18,19 @@ primary_region = "iad"
 dockerfile = "Dockerfile"
 
 [env]
-ALBATROSS_DB_PATH = "/data/albatross.db"
+ALBATROSS_DB_PATH = "/data/albatross.duckdb"
 ALBATROSS_COMMAND_GUILD_ID = "1527339615218958336" # ell.dev discord server
 
 [mounts]
 source = "albatross_data"
 destination = "/data"
+
+[http_service]
+internal_port = 8080
+force_https = true
+auto_stop_machines = false
+auto_start_machines = true
+min_machines_running = 1
 
 [[vm]]
 size = "shared-cpu-1x"

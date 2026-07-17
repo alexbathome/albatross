@@ -1,0 +1,112 @@
+basePath: /api
+definitions:
+  api.ErrorResponse:
+    properties:
+      error:
+        type: string
+    type: object
+  api.ScoreRecord:
+    properties:
+      channel_id:
+        type: string
+      guild_id:
+        type: string
+      hole:
+        type: integer
+      message_id:
+        type: string
+      recorded_at:
+        type: string
+      share_link:
+        type: string
+      strokes:
+        type: integer
+      user_id:
+        type: string
+    type: object
+info:
+  contact: {}
+  description: |-
+    Read-only REST API for querying putt.day scores tracked by the albatross Discord bot.
+    Recording and removing scores is only done via the Discord bot itself; this API has no
+    authentication, so it intentionally exposes no write or delete endpoints.
+  license:
+    name: MIT
+    url: https://github.com/alexbathome/albatross/blob/main/LICENSE
+  title: Albatross API
+  version: "1.0"
+paths:
+  /holes/{hole}/top:
+    get:
+      description: Returns up to limit scores for hole, ascending by strokes (lowest
+        first).
+      parameters:
+      - description: Hole number
+        in: path
+        name: hole
+        required: true
+        type: integer
+      - description: Max results (default 10, max 25)
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/api.ScoreRecord'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      summary: Leaderboard for a hole
+      tags:
+      - scores
+  /users/{userID}/holes/{hole}:
+    get:
+      description: 'Returns up to limit of userID''s records for hole, ascending by
+        strokes. Not deduplicated: every recorded play is returned.'
+      parameters:
+      - description: Discord user ID
+        in: path
+        name: userID
+        required: true
+        type: string
+      - description: Hole number
+        in: path
+        name: hole
+        required: true
+        type: integer
+      - description: Max results (max 25)
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/api.ScoreRecord'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      summary: A user's scores for a hole
+      tags:
+      - scores
+swagger: "2.0"
