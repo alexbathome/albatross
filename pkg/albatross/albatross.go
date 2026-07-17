@@ -12,6 +12,8 @@ import (
 	"syscall"
 	"time"
 
+	"golang.org/x/sync/errgroup"
+
 	"github.com/alexbathome/albatross/internal/api"
 	"github.com/alexbathome/albatross/internal/bot"
 	"github.com/alexbathome/albatross/internal/server"
@@ -81,29 +83,25 @@ func Main(ctx context.Context, args []string) error {
 
 	srv := server.NewServer(db)
 	api.NewAPI(srv).RegisterRoutes()
-	apiErrs := make(chan error, 1)
-	go func() {
+
+	g, gctx := errgroup.WithContext(ctx)
+	g.Go(func() error {
 		log.Printf("api listening on %s", apiAddr)
 		if err := srv.ListenAndServe(apiAddr); err != nil {
-			apiErrs <- fmt.Errorf("api server: %w", err)
+			return fmt.Errorf("api server: %w", err)
 		}
-	}()
-	defer func() {
+		return nil
+	})
+	g.Go(func() error {
+		<-gctx.Done()
+		log.Println("shutting down")
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), apiShutdownTimeout)
 		defer cancel()
-		if err := srv.Shutdown(shutdownCtx); err != nil {
-			log.Printf("shutting down api server: %v", err)
-		}
-	}()
+		return srv.Shutdown(shutdownCtx)
+	})
 
 	log.Println("albatross is running, press ctrl+c to stop")
-	select {
-	case <-ctx.Done():
-	case err := <-apiErrs:
-		log.Printf("%v", err)
-	}
-	log.Println("shutting down")
-	return nil
+	return g.Wait()
 }
 
 // envOr returns the value of the environment variable key, or def if unset.
