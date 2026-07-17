@@ -19,12 +19,13 @@ type Collector interface {
 // IncomingMessage is a discordgo-independent projection of the fields
 // ProcessMessage needs from a *discordgo.MessageCreate.
 type IncomingMessage struct {
-	Content   string
-	IsBot     bool
-	AuthorID  string
-	GuildID   string
-	ChannelID string
-	MessageID string
+	Content    string
+	IsBot      bool
+	AuthorID   string
+	AuthorName string
+	GuildID    string
+	ChannelID  string
+	MessageID  string
 }
 
 const (
@@ -66,6 +67,7 @@ func ProcessMessage(ctx context.Context, collector Collector, st store.Store, ms
 		Hole:       score.Hole,
 		Strokes:    score.Strokes,
 		UserID:     msg.AuthorID,
+		Username:   msg.AuthorName,
 		GuildID:    msg.GuildID,
 		ChannelID:  msg.ChannelID,
 		MessageID:  msg.MessageID,

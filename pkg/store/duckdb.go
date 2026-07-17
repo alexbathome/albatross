@@ -55,11 +55,17 @@ CREATE TABLE IF NOT EXISTS scores (
     hole        INTEGER NOT NULL REFERENCES holes(hole),
     strokes     INTEGER NOT NULL,
     user_id     TEXT NOT NULL,
+    username    TEXT NOT NULL DEFAULT '',
     guild_id    TEXT NOT NULL,
     channel_id  TEXT NOT NULL,
     message_id  TEXT NOT NULL,
     recorded_at TIMESTAMP NOT NULL
 );
+
+-- CREATE TABLE IF NOT EXISTS is a no-op against a database that already has
+-- a scores table from before the username column existed, so add it here
+-- too for upgrades in place.
+ALTER TABLE scores ADD COLUMN IF NOT EXISTS username TEXT DEFAULT '';
 `
 
 func initializeDuckDbStore(store *DuckDbStore) error {
@@ -154,10 +160,10 @@ func (d *DuckDbStore) SaveScore(ctx context.Context, rec ScoreRecord) (inserted 
 
 	res, err := tx.ExecContext(ctx,
 		`
-	INSERT INTO scores (share_link, hole, strokes, user_id, guild_id, channel_id, message_id, recorded_at)
-	VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+	INSERT INTO scores (share_link, hole, strokes, user_id, username, guild_id, channel_id, message_id, recorded_at)
+	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 	ON CONFLICT (share_link) DO NOTHING
-	`, rec.ShareLink, rec.Hole, rec.Strokes, rec.UserID, rec.GuildID, rec.ChannelID, rec.MessageID, rec.RecordedAt,
+	`, rec.ShareLink, rec.Hole, rec.Strokes, rec.UserID, rec.Username, rec.GuildID, rec.ChannelID, rec.MessageID, rec.RecordedAt,
 	)
 	if err != nil {
 		return false, fmt.Errorf("saving score: %w", err)
@@ -176,7 +182,7 @@ func (d *DuckDbStore) SaveScore(ctx context.Context, rec ScoreRecord) (inserted 
 // TopScores implements [Store].
 func (d *DuckDbStore) TopScores(ctx context.Context, hole int, limit int) ([]ScoreRecord, error) {
 	rows, err := d.db.QueryContext(ctx, `
-	SELECT share_link, hole, strokes, user_id, guild_id, channel_id, message_id, recorded_at
+	SELECT share_link, hole, strokes, user_id, username, guild_id, channel_id, message_id, recorded_at
 	FROM (
 		SELECT *,
 		       ROW_NUMBER() OVER (PARTITION BY hole, user_id, strokes ORDER BY recorded_at DESC) AS rn
@@ -195,7 +201,7 @@ func (d *DuckDbStore) TopScores(ctx context.Context, hole int, limit int) ([]Sco
 	var out []ScoreRecord
 	for rows.Next() {
 		var record ScoreRecord
-		if err := rows.Scan(&record.ShareLink, &record.Hole, &record.Strokes, &record.UserID, &record.GuildID, &record.ChannelID, &record.MessageID, &record.RecordedAt); err != nil {
+		if err := rows.Scan(&record.ShareLink, &record.Hole, &record.Strokes, &record.UserID, &record.Username, &record.GuildID, &record.ChannelID, &record.MessageID, &record.RecordedAt); err != nil {
 			return nil, fmt.Errorf("scanning top score: %w", err)
 		}
 		out = append(out, record)
@@ -209,11 +215,11 @@ func (d *DuckDbStore) TopScores(ctx context.Context, hole int, limit int) ([]Sco
 // UserScores implements [Store].
 func (d *DuckDbStore) UserScores(ctx context.Context, hole int, userID string, limit int) ([]ScoreRecord, error) {
 	rows, err := d.db.QueryContext(ctx, `
-	SELECT share_link, hole, strokes, user_id, guild_id, channel_id, message_id, recorded_at
+	SELECT share_link, hole, strokes, user_id, username, guild_id, channel_id, message_id, recorded_at
 	FROM scores
-	WHERE hole = ? AND user_id = ? 
+	WHERE hole = ? AND user_id = ?
 	ORDER BY strokes ASC
-	LIMIT ? 
+	LIMIT ?
 	`, hole, userID, limit)
 	if err != nil {
 		return nil, fmt.Errorf("querying user scores: %w", err)
@@ -223,7 +229,7 @@ func (d *DuckDbStore) UserScores(ctx context.Context, hole int, userID string, l
 	var out []ScoreRecord
 	for rows.Next() {
 		var record ScoreRecord
-		if err := rows.Scan(&record.ShareLink, &record.Hole, &record.Strokes, &record.UserID, &record.GuildID, &record.ChannelID, &record.MessageID, &record.RecordedAt); err != nil {
+		if err := rows.Scan(&record.ShareLink, &record.Hole, &record.Strokes, &record.UserID, &record.Username, &record.GuildID, &record.ChannelID, &record.MessageID, &record.RecordedAt); err != nil {
 			return nil, fmt.Errorf("scanning user score: %w", err)
 		}
 		out = append(out, record)

@@ -15,12 +15,13 @@ func (b *Bot) handleMessageCreate(s *discordgo.Session, m *discordgo.MessageCrea
 		return
 	}
 	msg := IncomingMessage{
-		Content:   m.Content,
-		IsBot:     m.Author.Bot,
-		AuthorID:  m.Author.ID,
-		GuildID:   m.GuildID,
-		ChannelID: m.ChannelID,
-		MessageID: m.ID,
+		Content:    m.Content,
+		IsBot:      m.Author.Bot,
+		AuthorID:   m.Author.ID,
+		AuthorName: m.Author.DisplayName(),
+		GuildID:    m.GuildID,
+		ChannelID:  m.ChannelID,
+		MessageID:  m.ID,
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)

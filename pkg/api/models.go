@@ -11,6 +11,7 @@ type ScoreRecord struct {
 	Hole       int       `json:"hole"`
 	Strokes    int       `json:"strokes"`
 	UserID     string    `json:"user_id"`
+	Username   string    `json:"username"`
 	GuildID    string    `json:"guild_id"`
 	ChannelID  string    `json:"channel_id"`
 	MessageID  string    `json:"message_id"`

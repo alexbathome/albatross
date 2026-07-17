@@ -82,6 +82,7 @@ func toAPIScoreRecords(recs []store.ScoreRecord) []apitypes.ScoreRecord {
 			Hole:       rec.Hole,
 			Strokes:    rec.Strokes,
 			UserID:     rec.UserID,
+			Username:   rec.Username,
 			GuildID:    rec.GuildID,
 			ChannelID:  rec.ChannelID,
 			MessageID:  rec.MessageID,

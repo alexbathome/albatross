@@ -17,10 +17,14 @@ var (
 
 // ScoreRecord is a single recorded putt.day play.
 type ScoreRecord struct {
-	ShareLink  string
-	Hole       int
-	Strokes    int
-	UserID     string
+	ShareLink string
+	Hole      int
+	Strokes   int
+	UserID    string
+	// Username is the Discord display name (global name if set, else
+	// username) of UserID at the time the score was recorded. It is a
+	// point-in-time snapshot, not kept in sync with later name changes.
+	Username   string
 	GuildID    string
 	ChannelID  string
 	MessageID  string
