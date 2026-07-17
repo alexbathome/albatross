@@ -10,11 +10,18 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
+	"github.com/alexbathome/albatross/internal/api"
 	"github.com/alexbathome/albatross/internal/bot"
+	"github.com/alexbathome/albatross/internal/server"
 	"github.com/alexbathome/albatross/pkg/puttday"
 	"github.com/alexbathome/albatross/pkg/store"
 )
+
+// apiShutdownTimeout bounds how long the HTTP API waits for in-flight
+// requests to finish during shutdown.
+const apiShutdownTimeout = 5 * time.Second
 
 // Main loads config, opens the store, starts the bot, and blocks until ctx
 // is canceled or a termination signal arrives. args is currently unused.
@@ -23,19 +30,21 @@ func Main(ctx context.Context, args []string) error {
 	defer stop()
 
 	var (
-		fs = flag.NewFlagSet("albatross", flag.ExitOnError)
+		fs             = flag.NewFlagSet("albatross", flag.ExitOnError)
 		discordToken   string
 		dbPath         string
 		commandGuildId string
+		apiAddr        string
 	)
 	fs.StringVar(&discordToken, "discord-token", "", "the discord bot token (or set ALBATROSS_DISCORD_TOKEN)")
 	fs.StringVar(&dbPath, "db-path", os.Getenv("ALBATROSS_DB_PATH"), "the path to the duckdb file")
 	fs.StringVar(&commandGuildId, "guild-id", os.Getenv("ALBATROSS_COMMAND_GUILD_ID"), "the discord server/guild id")
+	fs.StringVar(&apiAddr, "api-addr", envOr("ALBATROSS_API_ADDR", ":8080"), "the address the HTTP API listens on")
 	if err := fs.Parse(args[1:]); err != nil {
 		return err
 	}
 	if discordToken == "" {
-		// don't put sensitive tokens in the fs.StringVar default as it can 
+		// don't put sensitive tokens in the fs.StringVar default as it can
 		// leak to stdout when the user runs `-h` or `--help`
 		discordToken = os.Getenv("ALBATROSS_DISCORD_TOKEN")
 	}
@@ -70,8 +79,37 @@ func Main(ctx context.Context, args []string) error {
 		}
 	}()
 
+	srv := server.NewServer(db)
+	api.NewAPI(srv).RegisterRoutes()
+	apiErrs := make(chan error, 1)
+	go func() {
+		log.Printf("api listening on %s", apiAddr)
+		if err := srv.ListenAndServe(apiAddr); err != nil {
+			apiErrs <- fmt.Errorf("api server: %w", err)
+		}
+	}()
+	defer func() {
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), apiShutdownTimeout)
+		defer cancel()
+		if err := srv.Shutdown(shutdownCtx); err != nil {
+			log.Printf("shutting down api server: %v", err)
+		}
+	}()
+
 	log.Println("albatross is running, press ctrl+c to stop")
-	<-ctx.Done()
+	select {
+	case <-ctx.Done():
+	case err := <-apiErrs:
+		log.Printf("%v", err)
+	}
 	log.Println("shutting down")
 	return nil
+}
+
+// envOr returns the value of the environment variable key, or def if unset.
+func envOr(key, def string) string {
+	if v, ok := os.LookupEnv(key); ok {
+		return v
+	}
+	return def
 }
