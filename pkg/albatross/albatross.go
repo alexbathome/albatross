@@ -4,7 +4,6 @@ package albatross
 
 import (
 	"context"
-	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -32,30 +31,17 @@ func Main(ctx context.Context, args []string) error {
 	defer stop()
 
 	var (
-		fs             = flag.NewFlagSet("albatross", flag.ExitOnError)
-		discordToken   string
-		dbPath         string
-		commandGuildId string
-		apiAddr        string
+		fs             = NewFlagSet("albatross")
+		discordToken   = Flag(fs, fs.String, "discord-token", "", "the discord bot token (or set ALBATROSS_DISCORD_TOKEN)", "ALBATROSS_DISCORD_TOKEN", true)
+		dbPath         = Flag(fs, fs.String, "db-path", "/tmp/albatross.db", "the path to the duckdb file", "ALBATROSS_DB_PATH", true)
+		commandGuildId = Flag(fs, fs.String, "guild-id", "", "the discord server/guild id", "ALBATROSS_COMMAND_GUILD_ID", false)
+		apiAddr        = Flag(fs, fs.String, "api-addr", ":8080", "the address the HTTP API listens on", "ALBATROSS_API_ADDR", false)
 	)
-	fs.StringVar(&discordToken, "discord-token", "", "the discord bot token (or set ALBATROSS_DISCORD_TOKEN)")
-	fs.StringVar(&dbPath, "db-path", os.Getenv("ALBATROSS_DB_PATH"), "the path to the duckdb file")
-	fs.StringVar(&commandGuildId, "guild-id", os.Getenv("ALBATROSS_COMMAND_GUILD_ID"), "the discord server/guild id")
-	fs.StringVar(&apiAddr, "api-addr", envOr("ALBATROSS_API_ADDR", ":8080"), "the address the HTTP API listens on")
 	if err := fs.Parse(args[1:]); err != nil {
 		return err
 	}
-	if discordToken == "" {
-		// don't put sensitive tokens in the fs.StringVar default as it can
-		// leak to stdout when the user runs `-h` or `--help`
-		discordToken = os.Getenv("ALBATROSS_DISCORD_TOKEN")
-	}
 
-	if discordToken == "" || dbPath == "" {
-		return fmt.Errorf("discord-token and db-path are required (as a flag or ALBATROSS_* env var)")
-	}
-
-	db, err := store.OpenDuckDb(dbPath)
+	db, err := store.OpenDuckDb(dbPath())
 	if err != nil {
 		return fmt.Errorf("opening store: %w", err)
 	}
@@ -67,7 +53,7 @@ func Main(ctx context.Context, args []string) error {
 
 	collector := puttday.NewCollector()
 
-	b, err := bot.New(discordToken, db, collector, commandGuildId)
+	b, err := bot.New(discordToken(), db, collector, commandGuildId())
 	if err != nil {
 		return fmt.Errorf("creating bot: %w", err)
 	}
@@ -86,8 +72,8 @@ func Main(ctx context.Context, args []string) error {
 
 	g, gctx := errgroup.WithContext(ctx)
 	g.Go(func() error {
-		log.Printf("api listening on %s", apiAddr)
-		if err := srv.ListenAndServe(apiAddr); err != nil {
+		log.Printf("api listening on %s", apiAddr())
+		if err := srv.ListenAndServe(apiAddr()); err != nil {
 			return fmt.Errorf("api server: %w", err)
 		}
 		return nil
@@ -102,12 +88,4 @@ func Main(ctx context.Context, args []string) error {
 
 	log.Println("albatross is running, press ctrl+c to stop")
 	return g.Wait()
-}
-
-// envOr returns the value of the environment variable key, or def if unset.
-func envOr(key, def string) string {
-	if v, ok := os.LookupEnv(key); ok {
-		return v
-	}
-	return def
 }
