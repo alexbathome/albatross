@@ -20,6 +20,9 @@ onMounted(async () => {
 
 <template>
   <div class="page">
+    <a class="discord-cta" href="https://discord.gg/sfuM89Sv2G" target="_blank" rel="noopener noreferrer">
+      📢 Submit your scores on Discord
+    </a>
     <div class="home-grid">
       <section class="card panel">
         <h2 class="panel-title">Today's top 10</h2>
@@ -76,5 +79,21 @@ onMounted(async () => {
 
 .hole-link:hover {
   text-decoration: underline;
+}
+
+.discord-cta {
+  display: inline-block;
+  margin-bottom: 20px;
+  padding: 10px 20px;
+  font-weight: 700;
+  color: var(--accent-ink);
+  background: var(--accent);
+  border-radius: 999px;
+  text-decoration: none;
+  transition: transform 0.15s ease;
+}
+
+.discord-cta:hover {
+  transform: translateY(-1px);
 }
 </style>
