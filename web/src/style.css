@@ -1,0 +1,193 @@
+/* Design tokens. Light is the default; dark overrides follow the system
+   setting via prefers-color-scheme. Components must only use these variables,
+   never raw colors, so both themes stay complete. */
+:root {
+  --page: #fdfaf3;
+  --bg: #ffffff;
+  --text: #5b564c;
+  --text-h: #14110c;
+  --muted: #948d7c;
+  --border: #e8e3d5;
+  --row-hover: rgba(20, 17, 12, 0.04);
+
+  --accent: #1baf7a;
+  --accent-ink: #0b1f17;
+  --accent-soft: rgba(27, 175, 122, 0.14);
+
+  --danger: #e5484d;
+
+  --sans: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+
+  font: 16px/145% var(--sans);
+  color-scheme: light dark;
+  color: var(--text);
+  background: var(--page);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --page: #14120f;
+    --bg: #1f1c17;
+    --text: #c7c2b5;
+    --text-h: #fdfaf7;
+    --muted: #948d7c;
+    --border: #322e26;
+    --row-hover: rgba(255, 255, 255, 0.05);
+
+    --accent: #22c68a;
+    --accent-ink: #06140d;
+    --accent-soft: rgba(34, 198, 138, 0.16);
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+a {
+  color: inherit;
+}
+
+#app {
+  max-width: 1100px;
+  margin: 0 auto;
+  min-height: 100svh;
+}
+
+/* Site chrome */
+
+.site-header {
+  display: flex;
+  align-items: center;
+  padding: 24px;
+}
+
+.brand {
+  font-weight: 800;
+  font-size: 20px;
+  letter-spacing: -0.3px;
+  color: var(--text-h);
+  text-decoration: none;
+}
+
+.brand-accent {
+  color: var(--accent);
+}
+
+/* Panels */
+
+.card {
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--bg);
+}
+
+.panel {
+  padding: 28px 32px;
+
+  @media (max-width: 720px) {
+    padding: 20px;
+  }
+}
+
+.panel-title {
+  margin: 0 0 16px;
+  font-size: 15px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.status {
+  margin: 0;
+  color: var(--muted);
+}
+
+.status-error {
+  color: var(--danger);
+}
+
+/* Data tables */
+
+.table-scroll {
+  overflow-x: auto;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 15px;
+}
+
+.data-table th,
+.data-table td {
+  text-align: left;
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.data-table th {
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.data-table td {
+  color: var(--text-h);
+}
+
+.num-cell {
+  font-variant-numeric: tabular-nums;
+}
+
+.muted-cell {
+  color: var(--muted);
+}
+
+.row-top .strokes-cell {
+  color: var(--accent);
+  font-weight: 800;
+}
+
+.cell-link {
+  color: var(--accent);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.cell-link:hover {
+  text-decoration: underline;
+}
+
+.replay-cell {
+  text-align: right;
+}
+
+.replay-link {
+  display: inline-block;
+  padding: 5px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-h);
+  background: var(--accent-soft);
+  border-radius: 999px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.replay-link:hover {
+  color: var(--accent-ink);
+  background: var(--accent);
+}

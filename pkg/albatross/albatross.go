@@ -18,6 +18,7 @@ import (
 	"github.com/alexbathome/albatross/internal/server"
 	"github.com/alexbathome/albatross/pkg/puttday"
 	"github.com/alexbathome/albatross/pkg/store"
+	"github.com/alexbathome/albatross/web"
 )
 
 // apiShutdownTimeout bounds how long the HTTP API waits for in-flight
@@ -69,6 +70,7 @@ func Main(ctx context.Context, args []string) error {
 
 	srv := server.NewServer(db)
 	api.NewAPI(srv).RegisterRoutes()
+	srv.Handle("/", server.Frontend(web.FS()))
 
 	g, gctx := errgroup.WithContext(ctx)
 	g.Go(func() error {

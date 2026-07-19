@@ -19,6 +19,43 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/holes": {
+            "get": {
+                "description": "Returns up to limit registered holes, descending by hole number.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "holes"
+                ],
+                "summary": "List recent holes",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Max results (default 20, max 1000)",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/api.Hole"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/holes/{hole}/top": {
             "get": {
                 "description": "Returns up to limit scores for hole, ascending by strokes (lowest first).",
@@ -40,6 +77,56 @@ const docTemplate = `{
                     {
                         "type": "integer",
                         "description": "Max results (default 10, max 25)",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/api.ScoreRecord"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/scores": {
+            "get": {
+                "description": "Returns each matching user's best (lowest-stroke) play per hole, holes descending. Matches case-insensitively against the username recorded with each score.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "scores"
+                ],
+                "summary": "Search scores by username",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Username to search for (substring match)",
+                        "name": "username",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Max results (default 50, max 100)",
                         "name": "limit",
                         "in": "query"
                     }
@@ -133,6 +220,21 @@ const docTemplate = `{
             "properties": {
                 "error": {
                     "type": "string"
+                }
+            }
+        },
+        "api.Hole": {
+            "type": "object",
+            "properties": {
+                "custom": {
+                    "type": "boolean"
+                },
+                "hole": {
+                    "type": "integer"
+                },
+                "top_strokes": {
+                    "description": "TopStrokes is the lowest recorded stroke count for this hole, or null\nif it has no recorded scores.",
+                    "type": "integer"
                 }
             }
         },

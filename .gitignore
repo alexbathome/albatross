@@ -1,6 +1,9 @@
 # development scripts
 /dev.sh
 
+# make build output
+/bin/
+
 # local bbolt databases (contain real Discord user/guild IDs)
 *.db
 

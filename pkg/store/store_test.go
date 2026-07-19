@@ -392,3 +392,164 @@ func TestExists(t *testing.T) {
 		t.Fatalf("Exists() = false, want true after save")
 	}
 }
+
+func TestListHoles_Ordering(t *testing.T) {
+	ctx := context.Background()
+	s := openTestStore(t)
+
+	base := time.Now()
+	holes := []int{3, 1, 2}
+	for i, h := range holes {
+		rec := ScoreRecord{
+			ShareLink:  filepath.Join("link", string(rune('a'+i))),
+			Hole:       h,
+			Strokes:    4,
+			UserID:     "u1",
+			RecordedAt: base.Add(time.Duration(i) * time.Millisecond),
+		}
+		if _, err := s.SaveScore(ctx, rec); err != nil {
+			t.Fatalf("SaveScore() error = %v", err)
+		}
+	}
+
+	got, err := s.ListHoles(ctx, 10)
+	if err != nil {
+		t.Fatalf("ListHoles() error = %v", err)
+	}
+	want := []int{3, 2, 1}
+	if len(got) != len(want) {
+		t.Fatalf("ListHoles() len = %d, want %d", len(got), len(want))
+	}
+	for i, h := range got {
+		if h.Number != want[i] {
+			t.Errorf("ListHoles()[%d].Number = %d, want %d", i, h.Number, want[i])
+		}
+	}
+
+	got, err = s.ListHoles(ctx, 2)
+	if err != nil {
+		t.Fatalf("ListHoles() with limit error = %v", err)
+	}
+	if len(got) != 2 {
+		t.Fatalf("ListHoles() with limit len = %d, want 2", len(got))
+	}
+	if got[0].Number != 3 || got[1].Number != 2 {
+		t.Fatalf("ListHoles() with limit = %v, want [3, 2]", got)
+	}
+}
+
+func TestListHoles_TopStrokes(t *testing.T) {
+	ctx := context.Background()
+	s := openTestStore(t)
+
+	base := time.Now()
+	strokes := []int{7, 3, 5}
+	for i, st := range strokes {
+		rec := ScoreRecord{
+			ShareLink:  filepath.Join("link", string(rune('a'+i))),
+			Hole:       10,
+			Strokes:    st,
+			UserID:     string(rune('a' + i)),
+			RecordedAt: base.Add(time.Duration(i) * time.Millisecond),
+		}
+		if _, err := s.SaveScore(ctx, rec); err != nil {
+			t.Fatalf("SaveScore() error = %v", err)
+		}
+	}
+	got, err := s.ListHoles(ctx, 10)
+	if err != nil {
+		t.Fatalf("ListHoles() error = %v", err)
+	}
+	if len(got) != 1 {
+		t.Fatalf("ListHoles() len = %d, want 1", len(got))
+	}
+	if got[0].TopStrokes == nil || *got[0].TopStrokes != 3 {
+		t.Fatalf("ListHoles()[0].TopStrokes = %v, want 3", got[0].TopStrokes)
+	}
+}
+
+func TestSearchScores(t *testing.T) {
+	ctx := context.Background()
+	s := openTestStore(t)
+
+	base := time.Now()
+	entries := []struct {
+		hole    int
+		strokes int
+		userID  string
+		name    string
+	}{
+		{1, 5, "u1", "sam"},
+		{1, 3, "u1", "sam"}, // sam's better play on hole 1 supersedes the 5
+		{1, 4, "u2", "alex"},
+		{2, 6, "u1", "sam"},
+	}
+	for i, e := range entries {
+		rec := ScoreRecord{
+			ShareLink:  filepath.Join("link", string(rune('a'+i))),
+			Hole:       e.hole,
+			Strokes:    e.strokes,
+			UserID:     e.userID,
+			Username:   e.name,
+			RecordedAt: base.Add(time.Duration(i) * time.Millisecond),
+		}
+		if _, err := s.SaveScore(ctx, rec); err != nil {
+			t.Fatalf("SaveScore() error = %v", err)
+		}
+	}
+
+	got, err := s.SearchScores(ctx, "SAM", 10)
+	if err != nil {
+		t.Fatalf("SearchScores() error = %v", err)
+	}
+	want := []struct{ hole, strokes int }{{2, 6}, {1, 3}}
+	if len(got) != len(want) {
+		t.Fatalf("SearchScores() len = %d, want %d", len(got), len(want))
+	}
+	for i, rec := range got {
+		if rec.Hole != want[i].hole || rec.Strokes != want[i].strokes {
+			t.Errorf("SearchScores()[%d] = hole %d strokes %d, want hole %d strokes %d",
+				i, rec.Hole, rec.Strokes, want[i].hole, want[i].strokes)
+		}
+		if rec.Username != "sam" {
+			t.Errorf("SearchScores()[%d].Username = %q, want %q", i, rec.Username, "sam")
+		}
+	}
+
+	got, err = s.SearchScores(ctx, "nobody", 10)
+	if err != nil {
+		t.Fatalf("SearchScores() error = %v", err)
+	}
+	if got != nil {
+		t.Fatalf("SearchScores() with no match = %v, want nil", got)
+	}
+
+	// A LIKE wildcard in the query must match literally, not as a pattern.
+	got, err = s.SearchScores(ctx, "%", 10)
+	if err != nil {
+		t.Fatalf("SearchScores() error = %v", err)
+	}
+	if got != nil {
+		t.Fatalf("SearchScores(%%) = %v, want nil (wildcards must be escaped)", got)
+	}
+}
+
+func TestListHoles_TopStrokesNilWithoutScores(t *testing.T) {
+	ctx := context.Background()
+	s := openTestStore(t)
+
+	if _, err := s.db.ExecContext(ctx, `INSERT INTO holes (hole) VALUES (99)`); err != nil {
+		t.Fatalf("pre-registering hole: %v", err)
+	}
+
+	got, err := s.ListHoles(ctx, 10)
+	if err != nil {
+		t.Fatalf("ListHoles() error = %v", err)
+	}
+	if len(got) != 1 {
+		t.Fatalf("ListHoles() len = %d, want 1", len(got))
+	}
+	if got[0].TopStrokes != nil {
+		t.Fatalf("ListHoles()[0].TopStrokes = %v, want nil", *got[0].TopStrokes)
+	}
+}

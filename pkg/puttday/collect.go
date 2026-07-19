@@ -37,6 +37,16 @@ var (
 	// `“In the Clouds”</b> in <b>2</b>`. putt.day uses curly quotes, but
 	// straight quotes are accepted too in case that ever changes.
 	customMapPattern = regexp.MustCompile(`<b>[“"][^”"<]+[”"]</b> in <b>\d+</b>`)
+	// mapIDPattern matches the "Play this hole" button that share pages for
+	// custom (player-made) maps render, e.g.
+	// `href="/h/mqftqdwy7z3e5j" ...>Play this hole<`. That /h/<id> path is
+	// the map's stable, persistent identifier, unlike the page's sequential
+	// display number. Confirmed (via putt.day's own client bundle) that
+	// numbered daily holes never render this button — they get a generic
+	// "Play today's hole" link to /play instead, since a daily hole has no
+	// persistent /h/ page of its own. So this pattern only ever matches on
+	// custom-map pages.
+	mapIDPattern = regexp.MustCompile(`href="/h/([^"]+)"[^>]*>Play this hole<`)
 )
 
 type collector struct {
@@ -74,6 +84,16 @@ type SharedScore struct {
 	Hole    int
 	Strokes int
 	Link    string
+	// MapID is the persistent id from the share page's "Play this hole"
+	// button (`/h/<id>`), which identifies the underlying map itself as
+	// opposed to Hole's sequential display number. It is only ever
+	// populated for custom (player-made) maps: numbered daily holes have no
+	// such button on their share page (see mapIDPattern), and custom-map
+	// share pages never reach this struct at all today, since Collect
+	// short-circuits them with ErrCustomMap before building a SharedScore.
+	// In practice MapID is therefore always empty; the field and its
+	// extraction are wired up ready for whenever a caller needs it.
+	MapID string
 }
 
 // Collect takes a shareLink and returns a ([SharedScore], error)
@@ -115,6 +135,15 @@ func (c *collector) Collect(ctx context.Context, shareLink string) (*SharedScore
 		return nil, fmt.Errorf("parsing score: %w", err)
 	}
 	sharedScore.Link = parsedShareLink.String()
+
+	// The "Play this hole" button (and thus MapID) is only ever present on
+	// custom-map share pages, not numbered-hole ones like this success
+	// branch. Its absence here is expected, not an error: unlike Hole and
+	// Strokes, MapID is supplementary data, so a missing button just leaves
+	// it as the zero value rather than failing the whole collect.
+	if mapIDMatch := mapIDPattern.FindSubmatch(body); mapIDMatch != nil {
+		sharedScore.MapID = string(mapIDMatch[1])
+	}
 
 	return sharedScore, nil
 }
