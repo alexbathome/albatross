@@ -82,6 +82,52 @@ a {
   color: var(--accent);
 }
 
+.site-footer {
+  margin-top: 48px;
+  padding: 24px;
+  border-top: 1px solid var(--border);
+  text-align: center;
+}
+
+.footer-links {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.footer-links a {
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.footer-links a:hover {
+  color: var(--text-h);
+  text-decoration: underline;
+}
+
+.footer-sep {
+  color: var(--border);
+}
+
+.footer-links a.discord-link {
+  padding: 5px 14px;
+  font-weight: 700;
+  color: var(--text-h);
+  background: var(--accent-soft);
+  border-radius: 999px;
+}
+
+.footer-links a.discord-link:hover {
+  color: var(--accent-ink);
+  background: var(--accent);
+  text-decoration: none;
+}
+
 /* Panels */
 
 .card {
