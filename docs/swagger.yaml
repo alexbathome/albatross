@@ -5,6 +5,15 @@ definitions:
       error:
         type: string
     type: object
+  api.Hole:
+    properties:
+      custom:
+        type: boolean
+      hole:
+        type: integer
+      top_strokes:
+        type: integer
+    type: object
   api.ScoreRecord:
     properties:
       channel_id:
@@ -38,6 +47,30 @@ info:
   title: Albatross API
   version: "1.0"
 paths:
+  /holes:
+    get:
+      description: Returns up to limit registered holes, descending by hole number.
+      parameters:
+      - description: Max results (default 20, max 1000)
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/api.Hole'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      summary: List recent holes
+      tags:
+      - holes
   /holes/{hole}/top:
     get:
       description: Returns up to limit scores for hole, ascending by strokes (lowest

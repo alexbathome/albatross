@@ -22,6 +22,7 @@ func NewAPI(s *server.Server) *API {
 // RegisterRoutes wires every route, including the swagger UI, onto the
 // underlying server.
 func (a *API) RegisterRoutes() {
+	a.server.Register("GET /api/holes", a.handleListHoles)
 	a.server.Register("GET /api/holes/{hole}/top", a.handleTopScores)
 	a.server.Register("GET /api/users/{userID}/holes/{hole}", a.handleUserScores)
 

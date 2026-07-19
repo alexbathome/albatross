@@ -31,6 +31,17 @@ type ScoreRecord struct {
 	RecordedAt time.Time
 }
 
+// Hole is a registered hole, present once someone has played it or an admin
+// has pre-registered it.
+type Hole struct {
+	Number int
+	Custom bool
+	// TopStrokes is the lowest recorded stroke count for this hole, or nil
+	// if it has no recorded scores (e.g. pre-registered but never played,
+	// or every score for it has since been removed).
+	TopStrokes *int
+}
+
 // Store persists and queries ScoreRecords.
 type Store interface {
 	// SaveScore persists rec. If rec.ShareLink has already been recorded,
@@ -62,6 +73,10 @@ type Store interface {
 	// returned, so a user can browse back through every run on a hole —
 	// including a fun one worth keeping — not just their best per score.
 	UserScores(ctx context.Context, hole int, userID string, limit int) ([]ScoreRecord, error)
+
+	// ListHoles returns up to limit registered holes, descending by hole
+	// number (most recently added hole first).
+	ListHoles(ctx context.Context, limit int) ([]Hole, error)
 
 	// Close releases any resources held by the store.
 	Close() error

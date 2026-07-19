@@ -18,6 +18,15 @@ type ScoreRecord struct {
 	RecordedAt time.Time `json:"recorded_at"`
 }
 
+// Hole is a registered hole, as returned by the API.
+type Hole struct {
+	Number int  `json:"hole"`
+	Custom bool `json:"custom"`
+	// TopStrokes is the lowest recorded stroke count for this hole, or null
+	// if it has no recorded scores.
+	TopStrokes *int `json:"top_strokes"`
+}
+
 // ExistsResponse is the response body for GET /api/scores/exists.
 type ExistsResponse struct {
 	Exists bool `json:"exists"`

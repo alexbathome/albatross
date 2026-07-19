@@ -19,6 +19,43 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/holes": {
+            "get": {
+                "description": "Returns up to limit registered holes, descending by hole number.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "holes"
+                ],
+                "summary": "List recent holes",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Max results (default 20, max 1000)",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/api.Hole"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/holes/{hole}/top": {
             "get": {
                 "description": "Returns up to limit scores for hole, ascending by strokes (lowest first).",
@@ -133,6 +170,20 @@ const docTemplate = `{
             "properties": {
                 "error": {
                     "type": "string"
+                }
+            }
+        },
+        "api.Hole": {
+            "type": "object",
+            "properties": {
+                "custom": {
+                    "type": "boolean"
+                },
+                "hole": {
+                    "type": "integer"
+                },
+                "top_strokes": {
+                    "type": "integer"
                 }
             }
         },

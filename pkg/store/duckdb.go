@@ -212,6 +212,35 @@ func (d *DuckDbStore) TopScores(ctx context.Context, hole int, limit int) ([]Sco
 	return out, nil
 }
 
+// ListHoles implements [Store].
+func (d *DuckDbStore) ListHoles(ctx context.Context, limit int) ([]Hole, error) {
+	rows, err := d.db.QueryContext(ctx, `
+	SELECT h.hole, h.custom, MIN(s.strokes)
+	FROM holes h
+	LEFT JOIN scores s ON s.hole = h.hole
+	GROUP BY h.hole, h.custom
+	ORDER BY h.hole DESC
+	LIMIT ?
+	`, limit)
+	if err != nil {
+		return nil, fmt.Errorf("querying holes: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+
+	var out []Hole
+	for rows.Next() {
+		var h Hole
+		if err := rows.Scan(&h.Number, &h.Custom, &h.TopStrokes); err != nil {
+			return nil, fmt.Errorf("scanning hole: %w", err)
+		}
+		out = append(out, h)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating holes: %w", err)
+	}
+	return out, nil
+}
+
 // UserScores implements [Store].
 func (d *DuckDbStore) UserScores(ctx context.Context, hole int, userID string, limit int) ([]ScoreRecord, error) {
 	rows, err := d.db.QueryContext(ctx, `

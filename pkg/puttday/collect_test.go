@@ -133,6 +133,7 @@ func TestCollect(t *testing.T) {
 		statusCode  int
 		wantHole    int
 		wantStrokes int
+		wantMapID   string
 		wantErr     error
 	}{
 		{
@@ -141,6 +142,25 @@ func TestCollect(t *testing.T) {
 			statusCode:  http.StatusOK,
 			wantHole:    65,
 			wantStrokes: 6,
+		},
+		{
+			name: "success with play-this-hole button populates MapID",
+			body: `Someone finished <b>Hole #65</b> in <b>6</b> strokes. Can you beat it?` +
+				`<a href="/h/mqftqdwy7z3e5j" class="inline-block w-full max-w-xs rounded-lg" ` +
+				`>Play this hole</a>`,
+			statusCode:  http.StatusOK,
+			wantHole:    65,
+			wantStrokes: 6,
+			wantMapID:   "mqftqdwy7z3e5j",
+		},
+		{
+			name: "success with play-today's-hole button leaves MapID empty",
+			body: `Someone finished <b>Hole #65</b> in <b>6</b> strokes. Can you beat it?` +
+				`<a href="/play" class="inline-block w-full max-w-xs rounded-lg">Play today’s hole</a>`,
+			statusCode:  http.StatusOK,
+			wantHole:    65,
+			wantStrokes: 6,
+			wantMapID:   "",
 		},
 		{
 			name:        "success with multi-digit hole and score",
@@ -204,6 +224,9 @@ func TestCollect(t *testing.T) {
 			}
 			if score.Hole != tt.wantHole || score.Strokes != tt.wantStrokes {
 				t.Errorf("Collect() = %+v, want Hole=%d Strokes=%d", score, tt.wantHole, tt.wantStrokes)
+			}
+			if score.MapID != tt.wantMapID {
+				t.Errorf("Collect().MapID = %q, want %q", score.MapID, tt.wantMapID)
 			}
 			if score.Link != shareLink {
 				t.Errorf("Collect().Link = %q, want %q", score.Link, shareLink)
