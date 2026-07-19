@@ -11,7 +11,7 @@ const router = createRouter({
     {
       path: '/holes/:hole',
       name: 'hole',
-      component: () => import('../views/HomeView.vue'),
+      component: () => import('../views/HoleView.vue'),
       props: (route) => ({ hole: Number(route.params.hole) }),
     },
   ],

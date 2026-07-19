@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/duckdb/duckdb-go/v2"
@@ -198,16 +199,9 @@ func (d *DuckDbStore) TopScores(ctx context.Context, hole int, limit int) ([]Sco
 	}
 	defer func() { _ = rows.Close() }()
 
-	var out []ScoreRecord
-	for rows.Next() {
-		var record ScoreRecord
-		if err := rows.Scan(&record.ShareLink, &record.Hole, &record.Strokes, &record.UserID, &record.Username, &record.GuildID, &record.ChannelID, &record.MessageID, &record.RecordedAt); err != nil {
-			return nil, fmt.Errorf("scanning top score: %w", err)
-		}
-		out = append(out, record)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterating top scores: %w", err)
+	out, err := collectScoreRecords(rows)
+	if err != nil {
+		return nil, fmt.Errorf("top scores: %w", err)
 	}
 	return out, nil
 }
@@ -255,16 +249,57 @@ func (d *DuckDbStore) UserScores(ctx context.Context, hole int, userID string, l
 	}
 	defer func() { _ = rows.Close() }()
 
+	out, err := collectScoreRecords(rows)
+	if err != nil {
+		return nil, fmt.Errorf("user scores: %w", err)
+	}
+	return out, nil
+}
+
+// likeEscaper escapes LIKE wildcards so user-entered search text matches
+// literally rather than as a pattern.
+var likeEscaper = strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`)
+
+// SearchScores implements [Store].
+func (d *DuckDbStore) SearchScores(ctx context.Context, q string, limit int) ([]ScoreRecord, error) {
+	rows, err := d.db.QueryContext(ctx, `
+	SELECT share_link, hole, strokes, user_id, username, guild_id, channel_id, message_id, recorded_at
+	FROM (
+		SELECT *,
+		       ROW_NUMBER() OVER (PARTITION BY hole, user_id ORDER BY strokes ASC, recorded_at DESC) AS rn
+		FROM scores
+		WHERE username ILIKE '%' || ? || '%' ESCAPE '\'
+	) ranked
+	WHERE rn = 1
+	ORDER BY hole DESC, strokes ASC
+	LIMIT ?
+	`, likeEscaper.Replace(q), limit)
+	if err != nil {
+		return nil, fmt.Errorf("querying score search: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+
+	out, err := collectScoreRecords(rows)
+	if err != nil {
+		return nil, fmt.Errorf("score search: %w", err)
+	}
+	return out, nil
+}
+
+// collectScoreRecords scans every remaining row of a
+// SELECT share_link, hole, strokes, user_id, username, guild_id, channel_id,
+// message_id, recorded_at query into ScoreRecords.
+func collectScoreRecords(rows *sql.Rows) ([]ScoreRecord, error) {
 	var out []ScoreRecord
 	for rows.Next() {
 		var record ScoreRecord
 		if err := rows.Scan(&record.ShareLink, &record.Hole, &record.Strokes, &record.UserID, &record.Username, &record.GuildID, &record.ChannelID, &record.MessageID, &record.RecordedAt); err != nil {
-			return nil, fmt.Errorf("scanning user score: %w", err)
+			return nil, fmt.Errorf("scanning score: %w", err)
 		}
 		out = append(out, record)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterating user scores: %w", err)
+		return nil, fmt.Errorf("iterating scores: %w", err)
 	}
 	return out, nil
 }

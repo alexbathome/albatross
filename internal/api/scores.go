@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/alexbathome/albatross/internal/server"
 	apitypes "github.com/alexbathome/albatross/pkg/api"
@@ -11,9 +12,11 @@ import (
 )
 
 const (
-	defaultTopLimit  = 10
-	maxTopLimit      = 25 // mirrors the bot's /top command cap
-	defaultUserLimit = 25 // mirrors the bot's /score command
+	defaultTopLimit    = 10
+	maxTopLimit        = 25 // mirrors the bot's /top command cap
+	defaultUserLimit   = 25 // mirrors the bot's /score command
+	defaultSearchLimit = 50
+	maxSearchLimit     = 100
 )
 
 // handleTopScores returns the leaderboard for a hole.
@@ -34,7 +37,7 @@ func (a *API) handleTopScores(s *server.Server, w http.ResponseWriter, r *http.R
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	limit := clampInt(optionalIntQuery(r, "limit", defaultTopLimit), 1, maxTopLimit)
+	limit := limitQuery(r, defaultTopLimit, maxTopLimit)
 
 	recs, err := s.Store().TopScores(r.Context(), hole, limit)
 	if err != nil {
@@ -64,11 +67,40 @@ func (a *API) handleUserScores(s *server.Server, w http.ResponseWriter, r *http.
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	limit := clampInt(optionalIntQuery(r, "limit", defaultUserLimit), 1, defaultUserLimit)
+	limit := limitQuery(r, defaultUserLimit, defaultUserLimit)
 
 	recs, err := s.Store().UserScores(r.Context(), hole, userID, limit)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "looking up user scores failed")
+		return
+	}
+	writeJSON(w, http.StatusOK, toAPIScoreRecords(recs))
+}
+
+// handleSearchScores returns the best recorded play per hole for each user
+// whose username matches the query.
+//
+//	@Summary		Search scores by username
+//	@Description	Returns each matching user's best (lowest-stroke) play per hole, holes descending. Matches case-insensitively against the username recorded with each score.
+//	@Tags			scores
+//	@Produce		json
+//	@Param			username	query		string	true	"Username to search for (substring match)"
+//	@Param			limit		query		int		false	"Max results (default 50, max 100)"
+//	@Success		200			{array}		apitypes.ScoreRecord
+//	@Failure		400			{object}	apitypes.ErrorResponse
+//	@Failure		500			{object}	apitypes.ErrorResponse
+//	@Router			/scores [get]
+func (a *API) handleSearchScores(s *server.Server, w http.ResponseWriter, r *http.Request) {
+	username := strings.TrimSpace(r.URL.Query().Get("username"))
+	if username == "" {
+		writeError(w, http.StatusBadRequest, "username is required")
+		return
+	}
+	limit := limitQuery(r, defaultSearchLimit, maxSearchLimit)
+
+	recs, err := s.Store().SearchScores(r.Context(), username, limit)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "searching scores failed")
 		return
 	}
 	writeJSON(w, http.StatusOK, toAPIScoreRecords(recs))
@@ -100,24 +132,14 @@ func requiredIntPath(r *http.Request, key string) (int, error) {
 	return v, nil
 }
 
-func optionalIntQuery(r *http.Request, key string, def int) int {
-	raw := r.URL.Query().Get(key)
-	if raw == "" {
-		return def
+// limitQuery returns the "limit" query parameter clamped to [1, maximum],
+// or def if the parameter is absent or not an integer.
+func limitQuery(r *http.Request, def, maximum int) int {
+	v := def
+	if raw := r.URL.Query().Get("limit"); raw != "" {
+		if parsed, err := strconv.Atoi(raw); err == nil {
+			v = parsed
+		}
 	}
-	v, err := strconv.Atoi(raw)
-	if err != nil {
-		return def
-	}
-	return v
-}
-
-func clampInt(v, minimum, maximum int) int {
-	if v < minimum {
-		return minimum
-	}
-	if v > maximum {
-		return maximum
-	}
-	return v
+	return min(max(v, 1), maximum)
 }

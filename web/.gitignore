@@ -8,7 +8,10 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
-dist
+# Keep dist/.gitkeep tracked: embed.go's go:embed needs dist/ to exist even
+# when the frontend hasn't been built.
+dist/*
+!dist/.gitkeep
 dist-ssr
 *.local
 

@@ -78,6 +78,13 @@ type Store interface {
 	// number (most recently added hole first).
 	ListHoles(ctx context.Context, limit int) ([]Hole, error)
 
+	// SearchScores returns the best (lowest-stroke) recorded play per hole
+	// for each user whose recorded username contains q, case-insensitively.
+	// Results are ordered by hole descending, then strokes ascending. The
+	// match is against the username snapshot on each record, so plays
+	// recorded under a former name only match that former name.
+	SearchScores(ctx context.Context, q string, limit int) ([]ScoreRecord, error)
+
 	// Close releases any resources held by the store.
 	Close() error
 }

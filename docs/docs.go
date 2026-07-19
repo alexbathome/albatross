@@ -106,6 +106,56 @@ const docTemplate = `{
                 }
             }
         },
+        "/scores": {
+            "get": {
+                "description": "Returns each matching user's best (lowest-stroke) play per hole, holes descending. Matches case-insensitively against the username recorded with each score.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "scores"
+                ],
+                "summary": "Search scores by username",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Username to search for (substring match)",
+                        "name": "username",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Max results (default 50, max 100)",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/api.ScoreRecord"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/users/{userID}/holes/{hole}": {
             "get": {
                 "description": "Returns up to limit of userID's records for hole, ascending by strokes. Not deduplicated: every recorded play is returned.",
@@ -183,6 +233,7 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "top_strokes": {
+                    "description": "TopStrokes is the lowest recorded stroke count for this hole, or null\nif it has no recorded scores.",
                     "type": "integer"
                 }
             }

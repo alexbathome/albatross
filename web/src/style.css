@@ -1,3 +1,6 @@
+/* Design tokens. Light is the default; dark overrides follow the system
+   setting via prefers-color-scheme. Components must only use these variables,
+   never raw colors, so both themes stay complete. */
 :root {
   --page: #fdfaf3;
   --bg: #ffffff;
@@ -11,8 +14,9 @@
   --accent-ink: #0b1f17;
   --accent-soft: rgba(27, 175, 122, 0.14);
 
+  --danger: #e5484d;
+
   --sans: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  --mono: ui-monospace, Consolas, monospace;
 
   font: 16px/145% var(--sans);
   color-scheme: light dark;
@@ -58,6 +62,8 @@ a {
   min-height: 100svh;
 }
 
+/* Site chrome */
+
 .site-header {
   display: flex;
   align-items: center;
@@ -76,11 +82,112 @@ a {
   color: var(--accent);
 }
 
-.status {
+/* Panels */
+
+.card {
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--bg);
+}
+
+.panel {
+  padding: 28px 32px;
+
+  @media (max-width: 720px) {
+    padding: 20px;
+  }
+}
+
+.panel-title {
+  margin: 0 0 16px;
+  font-size: 15px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
   color: var(--muted);
-  padding: 0 24px;
+}
+
+.status {
+  margin: 0;
+  color: var(--muted);
 }
 
 .status-error {
-  color: #e5484d;
+  color: var(--danger);
+}
+
+/* Data tables */
+
+.table-scroll {
+  overflow-x: auto;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 15px;
+}
+
+.data-table th,
+.data-table td {
+  text-align: left;
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.data-table th {
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.data-table td {
+  color: var(--text-h);
+}
+
+.num-cell {
+  font-variant-numeric: tabular-nums;
+}
+
+.muted-cell {
+  color: var(--muted);
+}
+
+.row-top .strokes-cell {
+  color: var(--accent);
+  font-weight: 800;
+}
+
+.cell-link {
+  color: var(--accent);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.cell-link:hover {
+  text-decoration: underline;
+}
+
+.replay-cell {
+  text-align: right;
+}
+
+.replay-link {
+  display: inline-block;
+  padding: 5px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-h);
+  background: var(--accent-soft);
+  border-radius: 999px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.replay-link:hover {
+  color: var(--accent-ink);
+  background: var(--accent);
 }

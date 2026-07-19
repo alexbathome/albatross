@@ -24,6 +24,7 @@ func NewAPI(s *server.Server) *API {
 func (a *API) RegisterRoutes() {
 	a.server.Register("GET /api/holes", a.handleListHoles)
 	a.server.Register("GET /api/holes/{hole}/top", a.handleTopScores)
+	a.server.Register("GET /api/scores", a.handleSearchScores)
 	a.server.Register("GET /api/users/{userID}/holes/{hole}", a.handleUserScores)
 
 	a.server.Handle("/swagger/", httpSwagger.WrapHandler)

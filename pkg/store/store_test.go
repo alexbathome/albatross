@@ -468,6 +468,72 @@ func TestListHoles_TopStrokes(t *testing.T) {
 	}
 }
 
+func TestSearchScores(t *testing.T) {
+	ctx := context.Background()
+	s := openTestStore(t)
+
+	base := time.Now()
+	entries := []struct {
+		hole    int
+		strokes int
+		userID  string
+		name    string
+	}{
+		{1, 5, "u1", "sam"},
+		{1, 3, "u1", "sam"}, // sam's better play on hole 1 supersedes the 5
+		{1, 4, "u2", "alex"},
+		{2, 6, "u1", "sam"},
+	}
+	for i, e := range entries {
+		rec := ScoreRecord{
+			ShareLink:  filepath.Join("link", string(rune('a'+i))),
+			Hole:       e.hole,
+			Strokes:    e.strokes,
+			UserID:     e.userID,
+			Username:   e.name,
+			RecordedAt: base.Add(time.Duration(i) * time.Millisecond),
+		}
+		if _, err := s.SaveScore(ctx, rec); err != nil {
+			t.Fatalf("SaveScore() error = %v", err)
+		}
+	}
+
+	got, err := s.SearchScores(ctx, "SAM", 10)
+	if err != nil {
+		t.Fatalf("SearchScores() error = %v", err)
+	}
+	want := []struct{ hole, strokes int }{{2, 6}, {1, 3}}
+	if len(got) != len(want) {
+		t.Fatalf("SearchScores() len = %d, want %d", len(got), len(want))
+	}
+	for i, rec := range got {
+		if rec.Hole != want[i].hole || rec.Strokes != want[i].strokes {
+			t.Errorf("SearchScores()[%d] = hole %d strokes %d, want hole %d strokes %d",
+				i, rec.Hole, rec.Strokes, want[i].hole, want[i].strokes)
+		}
+		if rec.Username != "sam" {
+			t.Errorf("SearchScores()[%d].Username = %q, want %q", i, rec.Username, "sam")
+		}
+	}
+
+	got, err = s.SearchScores(ctx, "nobody", 10)
+	if err != nil {
+		t.Fatalf("SearchScores() error = %v", err)
+	}
+	if got != nil {
+		t.Fatalf("SearchScores() with no match = %v, want nil", got)
+	}
+
+	// A LIKE wildcard in the query must match literally, not as a pattern.
+	got, err = s.SearchScores(ctx, "%", 10)
+	if err != nil {
+		t.Fatalf("SearchScores() error = %v", err)
+	}
+	if got != nil {
+		t.Fatalf("SearchScores(%%) = %v, want nil (wildcards must be escaped)", got)
+	}
+}
+
 func TestListHoles_TopStrokesNilWithoutScores(t *testing.T) {
 	ctx := context.Background()
 	s := openTestStore(t)

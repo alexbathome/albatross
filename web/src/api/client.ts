@@ -9,10 +9,17 @@ async function get<T>(path: string): Promise<T> {
   return res.json() as Promise<T>
 }
 
-export function listHoles(limit = 20): Promise<Hole[]> {
+// The default limit covers the full archive of daily holes in one request —
+// see maxHolesLimit in internal/api/holes.go.
+export function listHoles(limit = 1000): Promise<Hole[]> {
   return get<Hole[]>(`/holes?limit=${limit}`)
 }
 
 export function topScores(hole: number, limit = 25): Promise<ScoreRecord[]> {
   return get<ScoreRecord[]>(`/holes/${hole}/top?limit=${limit}`)
+}
+
+/** Each matching user's best play per hole, holes descending. */
+export function searchScores(username: string, limit = 50): Promise<ScoreRecord[]> {
+  return get<ScoreRecord[]>(`/scores?username=${encodeURIComponent(username)}&limit=${limit}`)
 }

@@ -29,7 +29,7 @@ const (
 //	@Failure		500		{object}	apitypes.ErrorResponse
 //	@Router			/holes [get]
 func (a *API) handleListHoles(s *server.Server, w http.ResponseWriter, r *http.Request) {
-	limit := clampInt(optionalIntQuery(r, "limit", defaultHolesLimit), 1, maxHolesLimit)
+	limit := limitQuery(r, defaultHolesLimit, maxHolesLimit)
 
 	holes, err := s.Store().ListHoles(r.Context(), limit)
 	if err != nil {
