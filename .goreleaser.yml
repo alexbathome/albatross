@@ -4,17 +4,55 @@ before:
   hooks:
     - go mod tidy
 
+# DuckDB's Go bindings require CGO, so each target needs a matching C
+# cross-compiler rather than a plain `go build` with GOOS/GOARCH. These builds
+# run inside the goreleaser-cross Docker image (see release.yml), which
+# bundles the toolchains referenced below.
 builds:
-  - id: albatross
+  - id: linux-amd64
     main: ./cmd/albatross
     binary: albatross
     env:
-      - CGO_ENABLED=0
+      - CGO_ENABLED=1
     goos:
       - linux
+    goarch:
+      - amd64
+
+  - id: linux-arm64
+    main: ./cmd/albatross
+    binary: albatross
+    env:
+      - CGO_ENABLED=1
+      - CC=aarch64-linux-gnu-gcc
+      - CXX=aarch64-linux-gnu-g++
+    goos:
+      - linux
+    goarch:
+      - arm64
+
+  - id: darwin-amd64
+    main: ./cmd/albatross
+    binary: albatross
+    env:
+      - CGO_ENABLED=1
+      - CC=o64-clang
+      - CXX=o64-clang++
+    goos:
       - darwin
     goarch:
       - amd64
+
+  - id: darwin-arm64
+    main: ./cmd/albatross
+    binary: albatross
+    env:
+      - CGO_ENABLED=1
+      - CC=oa64-clang
+      - CXX=oa64-clang++
+    goos:
+      - darwin
+    goarch:
       - arm64
 
 archives:

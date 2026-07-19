@@ -42,17 +42,32 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Set up Go
-        uses: actions/setup-go@v5
+      - name: Set up Deno
+        uses: denoland/setup-deno@v2
         with:
-          go-version-file: go.mod
+          deno-version: "2.9.3"
 
+      # Goreleaser has no build hook of its own, so the frontend must be
+      # embedded before it runs (see HACKING.md's "Web frontend" section).
+      - name: Build frontend
+        working-directory: web
+        run: |
+          deno install
+          deno run -A npm:vite build
+
+      # DuckDB's Go bindings need CGO, and cross-compiling CGO for
+      # linux/arm64 and darwin/* from an amd64 Linux runner needs matching C
+      # cross-compilers, not just GOOS/GOARCH. goreleaser-cross bundles those
+      # toolchains (see the CC/CXX env vars per build in .goreleaser.yml).
       - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v6
-        with:
-          distribution: goreleaser
-          version: latest
-          args: release --clean
+        run: |
+          docker run --rm \
+            -e CGO_ENABLED=1 \
+            -e GITHUB_TOKEN \
+            -v "$PWD":/workspace \
+            -w /workspace \
+            ghcr.io/goreleaser/goreleaser-cross:v1.26.4 \
+            release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

@@ -4,6 +4,9 @@
 # make build output
 /bin/
 
+# goreleaser build output
+/dist/
+
 # local bbolt databases (contain real Discord user/guild IDs)
 *.db
 
